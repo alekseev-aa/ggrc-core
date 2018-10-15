@@ -2,15 +2,20 @@
 # Licensed under http://www.apache.org/licenses/LICENSE-2.0 <see LICENSE file>
 
 """Tests for control model."""
+import json
 import unittest
+
+import ddt
 
 from ggrc import db
 from ggrc.models import all_models
 from integration.ggrc import TestCase
 from integration.ggrc.models import factories
 from integration.ggrc import api_helper
+from integration.ggrc import generator
 
 
+@ddt.ddt
 class TestControl(TestCase):
   """Tests for control model."""
 
@@ -18,6 +23,7 @@ class TestControl(TestCase):
     """setUp, nothing else to add."""
     super(TestControl, self).setUp()
     self.api = api_helper.Api()
+    self.generator = generator.ObjectGenerator()
 
   def test_simple_categorization(self):
     """Check append category append to control."""
@@ -84,6 +90,27 @@ class TestControl(TestCase):
     control = db.session.query(all_models.Control).get(control.id)
     self.assertEqual(control.recipients, recipients)
     self.assertEqual(control.send_by_default, send_by_default)
+
+  @ddt.data(
+      ('<p>&lt;br&gt;</p>', '<p>&lt;br&gt;</p>'),
+      ('<p><b>&lt;br&gt;</b></p>', '<p><b>&lt;br&gt;</b></p>'),
+      ('<p><br></p>', '<p><br></p>'),
+      ('<script>alert(1)</script>', 'alert(1)'),
+      ('&lt;script&gt;alert(1)&lt;/script&gt;', 'alert(1)'),
+      ('<p>some comment</p>', '<p>some comment</p>'),
+      ('some comment', 'some comment'),
+  )
+  @ddt.unpack
+  def test_comment(self, description, expected_description):
+    """Test escaping comment description"""
+    control = factories.ControlFactory()
+    response, _ = self.generator.generate_comment(
+        control, "Verifiers", description, send_notification="false"
+    )
+    response = json.loads(response.response[0])
+    response_comment = response['comment']
+    response_description = response_comment['description']
+    self.assertEqual(response_description, expected_description)
 
   @unittest.skip("Skipped until control not Reviewable")
   def test_review_get(self):
