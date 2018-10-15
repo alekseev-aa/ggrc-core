@@ -205,6 +205,9 @@ class Comment(Roleable, Relatable, Described, Notifiable,
   _sanitize_html = [
       "description",
   ]
+  _escape_html = [
+      "description",
+  ]
 
   def get_objects_to_reindex(self):
     """Return list required objects for reindex if comment C.U.D."""

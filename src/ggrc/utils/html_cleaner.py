@@ -5,6 +5,10 @@
 
 from HTMLParser import HTMLParser
 
+import cgi
+import random
+import string
+
 import bleach
 
 
@@ -28,13 +32,47 @@ for tag in BLEACH_TAGS:
   BLEACH_ATTRS[tag] = ATTRS
 
 
-def cleaner(dummy, value, *_):
+def _clean_escaped_html(value):
+  """Cleans out unsafe escaped HTML tags.
+
+    Args:
+      value: html (string) to be cleaned
+    Returns:
+      escaped html (string) without unsafe tags.
+  """
+  value = _clean(value)
+  string_length = 10
+  sequence = string.ascii_uppercase + string.ascii_lowercase + string.digits
+  random_string = ''.join(
+      random.SystemRandom().choice(sequence) for _ in range(string_length)
+  )
+  lt_tag = 'lt%s' % random_string
+  gt_tag = 'gt%s' % random_string
+  customized_value = value.replace('<', lt_tag).replace('>', gt_tag)
+  unescaped_value = HTMLParser().unescape(customized_value)
+  cleaned_value = _clean(unescaped_value)
+  escaped_value = cgi.escape(cleaned_value)
+  return escaped_value.replace(lt_tag, '<').replace(gt_tag, '>')
+
+
+def _clean(value):
+  """Cleans out unsafe HTML tags. Uses bleach
+
+    Args:
+      value: html (string) to be cleaned
+    Returns:
+      html (string) without unsafe tags.
+  """
+  return bleach.clean(value, BLEACH_TAGS, BLEACH_ATTRS, strip=True)
+
+
+def cleaner(dummy, value, *args):
   """Cleans out unsafe HTML tags.
 
-  Uses bleach and unescape until it reaches a fix point.
+  Uses cleaning until it reaches a fix point.
 
   Args:
-    dummy: unused, sqalchemy will pass in the model class
+    dummy: sqalchemy will pass in the model class
     value: html (string) to be cleaned
   Returns:
     Html (string) without unsafe tags.
@@ -46,13 +84,17 @@ def cleaner(dummy, value, *_):
     # no point in sanitizing non-strings
     return value
 
+  event = args[1]
+  escape_keys = getattr(type(dummy), '_escape_html', [])
+  escape_html = event and event.key in escape_keys
   parser = HTMLParser()
   value = unicode(value)
   while True:
     lastvalue = value
-    value = parser.unescape(
-        bleach.clean(value, BLEACH_TAGS, BLEACH_ATTRS, strip=True)
-    )
+    if escape_html:
+      value = _clean_escaped_html(value)
+    else:
+      value = parser.unescape(_clean(value))
     if value == lastvalue:
       break
   return value
