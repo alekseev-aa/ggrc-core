@@ -95,6 +95,9 @@ class CycleTaskGroupObjectTask(roleable.Roleable,
       ft_attributes.MultipleSubpropertyFullTextAttr("comments",
                                                     "cycle_task_entries",
                                                     ["description"]),
+      ft_attributes.BooleanFullTextAttr("needs verification",
+                                        "is_verification_needed",
+                                        with_template=False),
       "folder",
   ]
 
