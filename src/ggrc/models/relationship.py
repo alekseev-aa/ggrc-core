@@ -163,7 +163,7 @@ class Relationship(base.ContextRBAC, Base, db.Model):
             .format(self.type, self.source_type, self.destination_type)
         )
     # else check if the opposite is a Snapshot
-    elif tgt_type == "Snapshot":
+    elif tgt_type == "Snapshot" and tgt_id:
       from ggrc.models import Snapshot
       snapshot = db.session.query(Snapshot).get(tgt_id)
       if snapshot.child_type == value.type and snapshot.child_id == value.id:

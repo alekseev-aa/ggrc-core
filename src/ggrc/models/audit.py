@@ -74,6 +74,8 @@ class Audit(Snapshotable,
   snapshots = db.relationship('Snapshot', backref='audit')
   archived = deferred(db.Column(db.Boolean,
                                 nullable=False, default=False), 'Audit')
+  manual_snapshots = deferred(db.Column(db.Boolean,
+                              nullable=False, default=False), 'Audit')
   assessment_templates = db.relationship('AssessmentTemplate', backref='audit')
 
   _api_attrs = reflection.ApiAttributes(
@@ -84,6 +86,7 @@ class Audit(Snapshotable,
       'program',
       'object_type',
       'archived',
+      'manual_snapshots',
   )
 
   _fulltext_attrs = [

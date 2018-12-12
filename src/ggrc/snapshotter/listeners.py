@@ -15,7 +15,7 @@ def create_all(sender, obj=None, src=None, service=None, event=None):  # noqa
   """Creates snapshots."""
   del sender, service  # Unused
   # We use "operation" for non-standard operations (e.g. cloning)
-  if not src.get("operation"):
+  if not src.get("operation") and not src.get("manual_snapshots"):
     create_snapshots(obj, event)
 
 
