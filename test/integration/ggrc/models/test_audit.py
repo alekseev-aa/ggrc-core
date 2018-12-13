@@ -189,3 +189,34 @@ class TestAudit(TestCase):
     current_slug = audit.slug
     expected_slug = "SLUG"
     self.assertEqual(current_slug, expected_slug)
+
+  def test_audit_manual_snapshots(self):
+    """Test creation audit without snapshot and adding manual snapshot"""
+    program = factories.ProgramFactory()
+    control = factories.ControlFactory()
+    factories.RelationshipFactory(
+        source=program,
+        destination=control,
+    )
+    self.api.post(all_models.Audit, [{
+        "audit": {
+            "title": "New Audit",
+            "program": {"id": program.id, "type": program.type},
+            "status": "Planned",
+            "context": None,
+            "manual_snapshots": True,
+        }
+    }])
+    audit = all_models.Audit.query.first()
+    self.assertIsNotNone(audit)
+    snapshot_count = all_models.Snapshot.query.count()
+    self.assertEqual(snapshot_count, 0)
+
+    control = all_models.Control.query.first()
+    self.gen.generate_relationship(audit.program, control)
+    audit = all_models.Audit.query.first()
+    self.api.put(audit, data={
+        "snapshots": {"operation": "upsert"}
+    })
+    snapshot_count = all_models.Snapshot.query.count()
+    self.assertEqual(snapshot_count, 1)
