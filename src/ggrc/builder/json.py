@@ -328,7 +328,7 @@ Result dispatch:
 """
 
 
-def build_type_query(type_, result_spec):
+def build_type_query(type_, result_spec, resource_type):
   model = ggrc.models.get_model(type_)
   mapper = model._sa_class_manager.mapper
   columns = []
@@ -351,6 +351,10 @@ def build_type_query(type_, result_spec):
   columns_indexes['context_id'] = 2
   columns.append(mapper.c.updated_at)
   columns_indexes['updated_at'] = 3
+  if (resource_type == ggrc.models.Audit.__name__ and
+          type_ == ggrc.models.Program.__name__):
+      columns.append(model.slug)
+      columns_indexes['slug'] = 4
 
   conditions = {}
   for keys, vals in result_spec.items():
@@ -384,7 +388,7 @@ def build_type_query(type_, result_spec):
   return columns_indexes, query
 
 
-def build_stub_union_query(queries):
+def build_stub_union_query(queries, resource_type):
   results = {}
   for (type_, conditions) in queries:
     if isinstance(conditions, (int, long, str, unicode)):
@@ -402,7 +406,9 @@ def build_stub_union_query(queries):
   type_column_indexes = {}
   type_queries = {}
   for (type_, result_spec) in results.items():
-    columns_indexes, query = build_type_query(type_, result_spec)
+    columns_indexes, query = build_type_query(
+        type_, result_spec, resource_type
+    )
     type_column_indexes[type_] = columns_indexes
     type_queries[type_] = query
     if len(columns_indexes) > column_count:
@@ -428,12 +434,16 @@ def build_stub_union_query(queries):
 def _render_stub_from_match(match, type_columns):
   type_ = match[type_columns['type']]
   id_ = match[type_columns['id']]
-  return {
+  result = {
       'type': type_,
       'id': id_,
       'context_id': match[type_columns['context_id']],
       'href': url_for(type_, id=id_),
   }
+  if type_columns.get('slug'):
+      slug = match[type_columns['slug']]
+      result.update({'slug': slug})
+  return result
 
 
 class LazyStubRepresentation(object):
@@ -503,7 +513,10 @@ def publish_representation(resource):
   if not queries:
     return resource
 
-  results, type_columns, query = build_stub_union_query(queries)
+  resource_type = None
+  if isinstance(resource, dict) and resource.get("type"):
+      resource_type = resource["type"]
+  results, type_columns, query = build_stub_union_query(queries, resource_type)
   rows = query.all()
   for row in rows:
     type_ = row[0]
