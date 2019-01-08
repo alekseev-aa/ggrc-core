@@ -243,8 +243,8 @@ class Workflow(roleable.Roleable,
       days = repeater % self.WORK_WEEK_LEN
       # append weekends if it's needed
       days += ((setup_date.isoweekday() + days) > self.WORK_WEEK_LEN) * 2
-      return setup_date + relativedelta.relativedelta(
-          setup_date, weeks=weeks, days=days)
+      return self.first_work_day(setup_date + relativedelta.relativedelta(
+          setup_date, weeks=weeks, days=days))
     calc_date = setup_date + relativedelta.relativedelta(
         setup_date,
         **{key: repeater}
