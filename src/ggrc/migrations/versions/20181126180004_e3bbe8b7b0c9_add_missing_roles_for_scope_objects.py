@@ -20,7 +20,7 @@ from ggrc.migrations import utils as migrations_utils
 
 # revision identifiers, used by Alembic.
 revision = 'e3bbe8b7b0c9'
-down_revision = '44f601715634'
+down_revision = 'dd2a3a987de5'
 
 
 SCOPING_OBJECTS = [
